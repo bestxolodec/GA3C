@@ -36,10 +36,11 @@ from ProcessStats import ProcessStats
 from ThreadDynamicAdjustment import ThreadDynamicAdjustment
 from ThreadPredictor import ThreadPredictor
 from ThreadTrainer import ThreadTrainer
-
+from Database import RedisDB
 
 class Server:
     def __init__(self):
+        self.db = RedisDB(Config.DB_HOST, Config.DB_PORT)
         self.stats = ProcessStats()
 
         self.training_q = Queue(maxsize=Config.MAX_QUEUE_SIZE)

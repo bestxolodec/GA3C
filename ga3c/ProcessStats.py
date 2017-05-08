@@ -42,7 +42,7 @@ from Config import Config
 class ProcessStats(Process):
     def __init__(self):
         super(ProcessStats, self).__init__()
-        self.episode_log_q = Queue(maxsize=100)
+        self.episode_log_q = Queue(maxsize=100)   # (datetime.now(), total_reward, total_length)
         self.episode_count = Value('i', 0)
         self.training_count = Value('i', 0)
         self.should_save_model = Value('i', 0)
