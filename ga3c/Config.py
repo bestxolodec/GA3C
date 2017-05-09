@@ -108,7 +108,7 @@ class Config:
     # Epsilon (regularize policy lag in GA3C)
     LOG_EPSILON = 1e-6
     # Training min batch size - increasing the batch size increases the stability of the algorithm, but make learning slower
-    TRAINING_MIN_BATCH_SIZE = 0
+    TRAINING_MIN_BATCH_SIZE = 32
 
     #########################################################################
     # Log and save
@@ -119,7 +119,7 @@ class Config:
     TENSORBOARD_UPDATE_FREQUENCY = 1000
 
     # Enable to save models every SAVE_FREQUENCY episodes
-    SAVE_MODELS = True
+    SAVE_MODELS = False
     # Save every SAVE_FREQUENCY episodes
     SAVE_FREQUENCY = 1000
 
@@ -149,8 +149,6 @@ class Config:
     DB_HOST = "0.0.0.0"
     # Port where database is listening
     DB_PORT = 7070
-
-    PUSH_GRADS_EVERY_N_BATCHES = 100
 
 
 

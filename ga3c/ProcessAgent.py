@@ -71,6 +71,7 @@ class ProcessAgent(Process):
         r_ = np.array([exp.reward for exp in experiences])
         return x_, a_, r_
 
+    # TODO: predict should return only actions
     def predict(self, state):
         # put the state in the prediction q
         self.prediction_q.put((self.id, state))
@@ -78,6 +79,7 @@ class ProcessAgent(Process):
         p, v = self.wait_q.get()
         return p, v
 
+    # TODO: this logic should be moved to Agent.py, it is easy, but what to do with value dependence?
     def select_action(self, prediction):
         if Config.PLAY_MODE:
             action = np.argmax(prediction)
@@ -103,6 +105,7 @@ class ProcessAgent(Process):
             action = self.select_action(prediction)
             reward, done = self.env.step(action)
             reward_sum += reward
+            # TODO: rewrite to use python lists and see how does it hurted performance
             exp = Experience(self.env.previous_state, action, prediction, reward, done)
             experiences.append(exp)
 

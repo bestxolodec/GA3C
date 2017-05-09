@@ -5,7 +5,7 @@ from NetworkVP import NetworkVP
 from Config import Config
 
 
-# TODO fill common interface
+# TODO: finish common interface
 class AgentInterface(object):
 
     def get_actions(self, states):
@@ -37,7 +37,7 @@ class A3CAgent(object):
     def predict_p_and_v(self, states):
         return self.model.predict_p_and_v(states)
 
-    # TODO: this function is not currently in use (see value dependence TODO in ProcessAgent.py)
+    # TODO: this function is not currently in use (see value dependence problem -> TODO in ProcessAgent.py)
     def get_actions(self, states):
         probs, values = self.model.predict_p_and_v(states)
         if Config.PLAY_MODE:

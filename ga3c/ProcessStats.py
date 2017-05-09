@@ -39,13 +39,14 @@ import time
 from Config import Config
 
 
+# TODO: rewrite everything here to use logging
+# TODO: maintaining episode_log_q only for logging purposes seems overkill
 class ProcessStats(Process):
     def __init__(self):
         super(ProcessStats, self).__init__()
         self.episode_log_q = Queue(maxsize=100)   # (datetime.now(), total_reward, total_length)
         self.episode_count = Value('i', 0)
         self.training_count = Value('i', 0)
-        self.should_save_model = Value('i', 0)
         self.trainer_count = Value('i', 0)
         self.predictor_count = Value('i', 0)
         self.agent_count = Value('i', 0)
@@ -60,6 +61,7 @@ class ProcessStats(Process):
         # average TPS from the beginning of the training (not current TPS)
         return np.ceil(self.training_count.value / (time.time() - self.start_time))
 
+    # TODO: this function should be splitted into several small pieces
     def run(self):
         with open(Config.RESULTS_FILENAME, 'a') as results_logger:
             rolling_frame_count = 0
@@ -86,9 +88,6 @@ class ProcessStats(Process):
                     first_time = old_episode_time
 
                 results_q.put((episode_time, reward, length))
-
-                if self.episode_count.value % Config.SAVE_FREQUENCY == 0:
-                    self.should_save_model.value = 1
 
                 if self.episode_count.value % Config.PRINT_STATS_FREQUENCY == 0:
                     print(

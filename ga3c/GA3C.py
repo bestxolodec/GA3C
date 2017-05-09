@@ -56,6 +56,8 @@ if Config.PLAY_MODE:
 
 assert Config.DUAL_RMSPROP is False, "We have broken this option"
 assert Config.TENSORBOARD is False, "We have broken this option"
+assert Config.SAVE_MODELS is False, "We have broken this option"
+assert Config.LOAD_CHECKPOINT is False, "We have broken this option"
 
 
 gym.undo_logger_setup()

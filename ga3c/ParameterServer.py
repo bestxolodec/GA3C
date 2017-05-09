@@ -1,6 +1,10 @@
 import numpy as np
 from time import sleep
 from Database import RedisInterface
+import logging
+import sys
+logging.basicConfig(stream=sys.stdout, level=logging.DEBUG,
+                    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 
 class Adam(object):
@@ -37,22 +41,21 @@ class ParameterServer(object):
             sleep(0.5)
 
     def get_and_merge_grads(self):
-        grads = self.db.get_n_first_grads(self.acc_grads_every_n)
-        return [np.mean(i) for i in zip(*grads)]
+        # use all grads available, not only self.acc_grads_every_n
+        return [np.mean(i) for i in zip(*self.db.get_all_grads())]
 
     def apply_grads(self, params, grads):
         return self.optimizer.apply_grads(params, grads)
-        # return [p - 0.001 * g for p, g in zip(params, grads)]
 
     def run(self):
         while True:
-            print("Inside run")
             self.block_until_enough_n_of_grads()
             grads = self.get_and_merge_grads()
             params = self.db.get_params()
             updated_params = self.apply_grads(params, grads)
             self.db.set_params(updated_params)
             self.db.clear_grads_list()
+            logging.info("Updated params. Cleared gradient list")
 
 
 if __name__ == "__main__":
