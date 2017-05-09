@@ -35,6 +35,8 @@ from Environment import Environment
 from Experience import Experience
 
 
+# TODO: remove all agent logic (action selection) from this class
+# TODO: rename this class to be EnvironmentHandler or something similar
 class ProcessAgent(Process):
     def __init__(self, id, prediction_q, training_q, episode_log_q):
         super(ProcessAgent, self).__init__()
@@ -64,9 +66,10 @@ class ProcessAgent(Process):
 
     def convert_data(self, experiences):
         x_ = np.array([exp.state for exp in experiences])
+        # this is one hot encoding essentially
         a_ = np.eye(self.num_actions)[np.array([exp.action for exp in experiences])].astype(np.float32)
         r_ = np.array([exp.reward for exp in experiences])
-        return x_, r_, a_
+        return x_, a_, r_
 
     def predict(self, state):
         # put the state in the prediction q
@@ -103,12 +106,14 @@ class ProcessAgent(Process):
             exp = Experience(self.env.previous_state, action, prediction, reward, done)
             experiences.append(exp)
 
+            # TIME_MAX is small (5 in original paper) so terminal_reward = value is crucial for performance
             if done or time_count == Config.TIME_MAX:
+                # TODO: fix dependence on value, see how is this handled in agentent
                 terminal_reward = 0 if done else value
 
                 updated_exps = ProcessAgent._accumulate_rewards(experiences, self.discount_factor, terminal_reward)
-                x_, r_, a_ = self.convert_data(updated_exps)
-                yield x_, r_, a_, reward_sum
+                x_, a_, r_ = self.convert_data(updated_exps)
+                yield x_, a_, r_, reward_sum
 
                 # reset the tmax count
                 time_count = 0
@@ -126,8 +131,8 @@ class ProcessAgent(Process):
         while self.exit_flag.value == 0:
             total_reward = 0
             total_length = 0
-            for x_, r_, a_, reward_sum in self.run_episode():
+            for x_, a_, r_, reward_sum in self.run_episode():
                 total_reward += reward_sum
                 total_length += len(r_) + 1  # +1 for last frame that we drop
-                self.training_q.put((x_, r_, a_))
+                self.training_q.put((x_, a_, r_))
             self.episode_log_q.put((datetime.now(), total_reward, total_length))

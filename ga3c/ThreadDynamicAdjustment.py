@@ -47,6 +47,11 @@ class ThreadDynamicAdjustment(Thread):
         self.temporal_training_count = 0
         self.exit_flag = False
 
+
+    def _add_del_component(self, add_func, del_func, cur_len, target_len):
+        for _ in np.arange(cur_len, target_len): add_func()
+        for _ in np.arange(target_len, cur_len): del_func()
+
     def enable_disable_components(self):
         cur_len = len(self.server.trainers)
         if cur_len < self.trainer_count:

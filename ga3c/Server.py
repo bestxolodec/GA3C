@@ -36,22 +36,24 @@ from ProcessStats import ProcessStats
 from ThreadDynamicAdjustment import ThreadDynamicAdjustment
 from ThreadPredictor import ThreadPredictor
 from ThreadTrainer import ThreadTrainer
-from Database import RedisDB
+from Database import RedisInterface
+from Agent import A3CAgent
 
 class Server:
     def __init__(self):
-        self.db = RedisDB(Config.DB_HOST, Config.DB_PORT)
+        self.db = RedisInterface(Config.DB_HOST, Config.DB_PORT)
         self.stats = ProcessStats()
 
         self.training_q = Queue(maxsize=Config.MAX_QUEUE_SIZE)
         self.prediction_q = Queue(maxsize=Config.MAX_QUEUE_SIZE)
 
-        self.model = NetworkVP(Config.DEVICE, Config.NETWORK_NAME, Environment().get_num_actions())
-        if Config.LOAD_CHECKPOINT:
-            self.stats.episode_count.value = self.model.load()
+        # TODO: move into agent all task and model specific logic
+        self.agent = A3CAgent(Environment().get_num_actions())
+        # self.model = NetworkVP(Config.DEVICE, Config.NETWORK_NAME, Environment().get_num_actions())
 
-        self.training_step = 0
-        self.frame_counter = 0
+        if Config.LOAD_CHECKPOINT:
+            raise DeprecationWarning
+            # self.stats.episode_count.value = self.model.load()
 
         self.agents = []
         self.predictors = []
@@ -86,19 +88,16 @@ class Server:
         self.trainers[-1].join()
         self.trainers.pop()
 
-    def train_model(self, x_, r_, a_, trainer_id):
-        self.model.train(x_, r_, a_, trainer_id)
-        self.training_step += 1
-        self.frame_counter += x_.shape[0]
-
+    def train_model(self, x_, a_, r_, trainer_id):
+        grads = self.agent.get_gradients(x_, a_, r_, trainer_id)
+        self.db.append_gradients(grads)
+        # self.model.train(x_, a_, r_, trainer_id)
         self.stats.training_count.value += 1
         self.dynamic_adjustment.temporal_training_count += 1
 
-        if Config.TENSORBOARD and self.stats.training_count.value % Config.TENSORBOARD_UPDATE_FREQUENCY == 0:
-            self.model.log(x_, r_, a_)
-
     def save_model(self):
-        self.model.save(self.stats.episode_count.value)
+        raise DeprecationWarning
+        # self.model.save(self.stats.episode_count.value)
 
     def main(self):
         self.stats.start()
@@ -108,15 +107,17 @@ class Server:
             for trainer in self.trainers:
                 trainer.enabled = False
 
+        # TODO: remove all model related parameters into Model class
         learning_rate_multiplier = (Config.LEARNING_RATE_END - Config.LEARNING_RATE_START) / Config.ANNEALING_EPISODE_COUNT
-        beta_multiplier = (Config.BETA_END - Config.BETA_START) / Config.ANNEALING_EPISODE_COUNT
+        # beta_multiplier = (Config.BETA_END - Config.BETA_START) / Config.ANNEALING_EPISODE_COUNT
 
         while self.stats.episode_count.value < Config.EPISODES:
             step = min(self.stats.episode_count.value, Config.ANNEALING_EPISODE_COUNT - 1)
-            self.model.learning_rate = Config.LEARNING_RATE_START + learning_rate_multiplier * step
-            self.model.beta = Config.BETA_START + beta_multiplier * step
+            # self.model.learning_rate = Config.LEARNING_RATE_START + learning_rate_multiplier * step
+            # self.model.beta = Config.BETA_START + beta_multiplier * step
 
             # Saving is async - even if we start saving at a given episode, we may save the model at a later episode
+            # self.stats.should_save_model is set on in ProcessStats.py
             if Config.SAVE_MODELS and self.stats.should_save_model.value > 0:
                 self.save_model()
                 self.stats.should_save_model.value = 0

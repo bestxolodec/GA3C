@@ -35,28 +35,32 @@ class ThreadPredictor(Thread):
     def __init__(self, server, id):
         super(ThreadPredictor, self).__init__()
         self.setDaemon(True)
-
         self.id = id
         self.server = server
         self.exit_flag = False
 
     def run(self):
         ids = np.zeros(Config.PREDICTION_BATCH_SIZE, dtype=np.uint16)
-        states = np.zeros(
-            (Config.PREDICTION_BATCH_SIZE, Config.IMAGE_HEIGHT, Config.IMAGE_WIDTH, Config.STACKED_FRAMES),
-            dtype=np.float32)
+        states = np.zeros((Config.PREDICTION_BATCH_SIZE, Config.IMAGE_HEIGHT,
+                           Config.IMAGE_WIDTH, Config.STACKED_FRAMES), dtype=np.float32)
 
         while not self.exit_flag:
+            # needed to block until something appear in prediction_q
             ids[0], states[0] = self.server.prediction_q.get()
-
             size = 1
+            # PREDICTION_BATCH_SIZE could be > number of environment_handlers
+            # so if predicton_q is empty `size` <= `len(self.server.agents)`
             while size < Config.PREDICTION_BATCH_SIZE and not self.server.prediction_q.empty():
                 ids[size], states[size] = self.server.prediction_q.get()
                 size += 1
 
-            batch = states[:size]
-            p, v = self.server.model.predict_p_and_v(batch)
+            probas, values = self.server.agent.predict_p_and_v(states[:size])
+            for i, p, v in zip(ids, probas, values):
+                if i < len(self.server.agents):
+                    self.server.agents[i].wait_q.put((p, v))
 
-            for i in range(size):
-                if ids[i] < len(self.server.agents):
-                    self.server.agents[ids[i]].wait_q.put((p[i], v[i]))
+            # TODO: UNCOMMENT, when fix process value dependence on value
+            # actions = self.server.agent.get_actions(states[:size])
+            # for i, a in zip(ids, actions):
+            #     if i < len(self.server.agents):
+            #         self.server.agents[i].wait_q.put(a)

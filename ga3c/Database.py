@@ -39,15 +39,15 @@ class RedisInterface(DatabaseInterface):
     def append_gradients(self, grads):
         self.connection.rpush(self.gradients_prefix, self._dump_obj_to_str(grads))
 
-    def save_session(self, observations, actions, rewards, memories=None):
-        pass
-
-    def save_params(self, params):
+    def save_session(self, states, actions, rewards, memories=None):
         pass
 
     def load_params(self):
         return self._load_obj_from_str(self.connection.get(self.params_prefix))
 
+    # should we have this one?
+    def save_params(self, params):
+        pass
 
 
 
