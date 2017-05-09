@@ -150,5 +150,8 @@ class Config:
     # Port where database is listening
     DB_PORT = 7070
 
+    PUSH_GRADS_EVERY_N_BATCHES = 100
+
+
 
 

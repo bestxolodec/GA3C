@@ -49,6 +49,8 @@ class Server:
 
         # TODO: move into agent all task and model specific logic
         self.agent = A3CAgent(Environment().get_num_actions())
+        if self.db.get_params() is None:  # initial params in db are not set yet
+            self.db.set_params(self.agent.get_param_values())
         # self.model = NetworkVP(Config.DEVICE, Config.NETWORK_NAME, Environment().get_num_actions())
 
         if Config.LOAD_CHECKPOINT:

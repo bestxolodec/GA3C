@@ -30,6 +30,9 @@ class A3CAgent(object):
     def set_param_values(self, param_values):
         self.model.set_all_trainable_param_values(param_values)
 
+    def get_param_values(self):
+        return self.model.get_all_trainable_param_values()
+
     # TODO remove this in favour of self.get_actions
     def predict_p_and_v(self, states):
         return self.model.predict_p_and_v(states)

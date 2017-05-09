@@ -243,10 +243,8 @@ class NetworkVP:
     def get_gradients(self, x, a, y_r, trainer_id):
         feed_dict = self.__get_base_feed_dict()
         feed_dict.update({self.x: x, self.y_r: y_r, self.action_index: a})
-        if Config.USE_GRAD_CLIP:
-            return self.sess.run(self.opt_grad_clipped, feed_dict=feed_dict)
-        else:
-            return self.sess.run(self.opt_grad, feed_dict=feed_dict)
+        opt_grad = self.opt_grad_clipped if Config.USE_GRAD_CLIP else self.opt_grad
+        return self.sess.run([g_v[0] for g_v in opt_grad], feed_dict=feed_dict)
 
     def set_all_trainable_param_values(self, param_values):
         params = self.graph.get_collection('trainable_variables')
