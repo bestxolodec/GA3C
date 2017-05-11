@@ -27,30 +27,29 @@
 from multiprocessing import Queue
 
 import time
+import numpy as np
 
 from Config import Config
 from Environment import Environment
-from NetworkVP import NetworkVP
 from ProcessAgent import ProcessAgent
 from ProcessStats import ProcessStats
 from ThreadDynamicAdjustment import ThreadDynamicAdjustment
 from ThreadPredictor import ThreadPredictor
 from ThreadTrainer import ThreadTrainer
-
+from Database import RedisInterface
+from Agent import A3CAgent
 
 class Server:
     def __init__(self):
+        self.db = RedisInterface(Config.DB_HOST, Config.DB_PORT)
         self.stats = ProcessStats()
 
         self.training_q = Queue(maxsize=Config.MAX_QUEUE_SIZE)
         self.prediction_q = Queue(maxsize=Config.MAX_QUEUE_SIZE)
 
-        self.model = NetworkVP(Config.DEVICE, Config.NETWORK_NAME, Environment().get_num_actions())
-        if Config.LOAD_CHECKPOINT:
-            self.stats.episode_count.value = self.model.load()
-
-        self.training_step = 0
-        self.frame_counter = 0
+        self.agent = A3CAgent(Environment().get_num_actions())
+        if self.db.get_params() is None:  # initial params in db are not set yet
+            self.db.set_params(self.agent.get_param_values())
 
         self.agents = []
         self.predictors = []
@@ -62,42 +61,32 @@ class Server:
             ProcessAgent(len(self.agents), self.prediction_q, self.training_q, self.stats.episode_log_q))
         self.agents[-1].start()
 
-    def remove_agent(self):
-        self.agents[-1].exit_flag.value = True
-        self.agents[-1].join()
-        self.agents.pop()
-
     def add_predictor(self):
         self.predictors.append(ThreadPredictor(self, len(self.predictors)))
         self.predictors[-1].start()
-
-    def remove_predictor(self):
-        self.predictors[-1].exit_flag = True
-        self.predictors[-1].join()
-        self.predictors.pop()
 
     def add_trainer(self):
         self.trainers.append(ThreadTrainer(self, len(self.trainers)))
         self.trainers[-1].start()
 
-    def remove_trainer(self):
-        self.trainers[-1].exit_flag = True
-        self.trainers[-1].join()
-        self.trainers.pop()
+    @staticmethod
+    def remove_from(entities_list):
+        entities_list[-1].exit_flag = True
+        entities_list[-1].join()
+        entities_list.pop()
 
-    def train_model(self, x_, r_, a_, trainer_id):
-        self.model.train(x_, r_, a_, trainer_id)
-        self.training_step += 1
-        self.frame_counter += x_.shape[0]
+    def remove_agent(self): self.remove_from(self.agents)
 
+    def remove_predictor(self): self.remove_from(self.predictors)
+
+    def remove_trainer(self): self.remove_from(self.trainers)
+
+    def train_model(self, x_, a_, r_, trainer_id):
+        grads = self.agent.get_gradients(x_, a_, r_, trainer_id)
+        self.db.append_gradients(grads)
         self.stats.training_count.value += 1
         self.dynamic_adjustment.temporal_training_count += 1
-
-        if Config.TENSORBOARD and self.stats.training_count.value % Config.TENSORBOARD_UPDATE_FREQUENCY == 0:
-            self.model.log(x_, r_, a_)
-
-    def save_model(self):
-        self.model.save(self.stats.episode_count.value)
+        self.db.add_session(x_, a_, r_)
 
     def main(self):
         self.stats.start()
@@ -107,20 +96,18 @@ class Server:
             for trainer in self.trainers:
                 trainer.enabled = False
 
-        learning_rate_multiplier = (Config.LEARNING_RATE_END - Config.LEARNING_RATE_START) / Config.ANNEALING_EPISODE_COUNT
-        beta_multiplier = (Config.BETA_END - Config.BETA_START) / Config.ANNEALING_EPISODE_COUNT
-
+        params_modify_time = self.db.get_params_modify_time()
         while self.stats.episode_count.value < Config.EPISODES:
-            step = min(self.stats.episode_count.value, Config.ANNEALING_EPISODE_COUNT - 1)
-            self.model.learning_rate = Config.LEARNING_RATE_START + learning_rate_multiplier * step
-            self.model.beta = Config.BETA_START + beta_multiplier * step
+            if params_modify_time < self.db.get_params_modify_time():
+                self.agent.set_param_values(self.db.get_params())
+                # from datetime import datetime as dt
+                # latency = dt.now() - self.db.get_params_modify_time()
+                # params_raveled = tuple(np.hstack([i.ravel() for i in self.agent.get_param_values()]))
+                # logging.debug("Latency: {}, current weights hash: {}".format(latency, hash(params_raveled)))
+                params_modify_time = self.db.get_params_modify_time()
 
-            # Saving is async - even if we start saving at a given episode, we may save the model at a later episode
-            if Config.SAVE_MODELS and self.stats.should_save_model.value > 0:
-                self.save_model()
-                self.stats.should_save_model.value = 0
-
-            time.sleep(0.01)
+            # jiter 0..0.5s to prevent network congestion
+            time.sleep(np.random.rand() / 2)
 
         self.dynamic_adjustment.exit_flag = True
         while self.agents:

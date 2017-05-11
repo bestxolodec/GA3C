@@ -47,6 +47,12 @@ class ThreadDynamicAdjustment(Thread):
         self.temporal_training_count = 0
         self.exit_flag = False
 
+    # TODO: find out if this function could serve as a building block for self.enable_disable_components
+    @staticmethod
+    def _add_del_component(add_func, del_func, cur_len, target_len):
+        alter_func = add_func if cur_len < target_len else del_func
+        [alter_func() for _ in range(abs(cur_len - target_len))]
+
     def enable_disable_components(self):
         cur_len = len(self.server.trainers)
         if cur_len < self.trainer_count:

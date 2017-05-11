@@ -39,14 +39,14 @@ class Config:
     # Load old models. Throws if the model doesn't exist
     LOAD_CHECKPOINT = False
     # If 0, the latest checkpoint is loaded
-    LOAD_EPISODE = 0 
+    LOAD_EPISODE = 0
 
     #########################################################################
     # Number of agents, predictors, trainers and other system settings
-    
+
     # If the dynamic configuration is on, these are the initial values.
     # Number of Agents
-    AGENTS = 32 
+    AGENTS = 32
     # Number of Predictors
     PREDICTORS = 2
     # Number of Trainers
@@ -65,10 +65,10 @@ class Config:
 
     # Discount factor
     DISCOUNT = 0.99
-    
+
     # Tmax
     TIME_MAX = 5
-    
+
     # Reward Clipping
     REWARD_MIN = -1
     REWARD_MAX = 1
@@ -101,15 +101,15 @@ class Config:
 
     # Dual RMSProp - we found that using a single RMSProp for the two cost function works better and faster
     DUAL_RMSPROP = False
-    
+
     # Gradient clipping
     USE_GRAD_CLIP = False
-    GRAD_CLIP_NORM = 40.0 
+    GRAD_CLIP_NORM = 40.0
     # Epsilon (regularize policy lag in GA3C)
     LOG_EPSILON = 1e-6
     # Training min batch size - increasing the batch size increases the stability of the algorithm, but make learning slower
-    TRAINING_MIN_BATCH_SIZE = 0
-    
+    TRAINING_MIN_BATCH_SIZE = 32
+
     #########################################################################
     # Log and save
 
@@ -119,10 +119,10 @@ class Config:
     TENSORBOARD_UPDATE_FREQUENCY = 1000
 
     # Enable to save models every SAVE_FREQUENCY episodes
-    SAVE_MODELS = True
+    SAVE_MODELS = False
     # Save every SAVE_FREQUENCY episodes
     SAVE_FREQUENCY = 1000
-    
+
     # Print stats every PRINT_STATS_FREQUENCY episodes
     PRINT_STATS_FREQUENCY = 1
     # The window to average stats
@@ -135,8 +135,21 @@ class Config:
 
     #########################################################################
     # More experimental parameters here
-    
+
     # Minimum policy
     MIN_POLICY = 0.0
     # Use log_softmax() instead of log(softmax())
     USE_LOG_SOFTMAX = False
+
+
+    #########################################################################
+    #  Databse related parameters
+
+    # Host where database is listening
+    DB_HOST = "0.0.0.0"
+    # Port where database is listening
+    DB_PORT = 7070
+
+
+
+

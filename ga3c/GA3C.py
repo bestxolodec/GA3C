@@ -53,6 +53,13 @@ if Config.PLAY_MODE:
     Config.TRAIN_MODELS = False
     Config.SAVE_MODELS = False
 
+
+assert Config.DUAL_RMSPROP is False, "We have broken this option"
+assert Config.TENSORBOARD is False, "We have broken this option"
+assert Config.SAVE_MODELS is False, "We have broken this option"
+assert Config.LOAD_CHECKPOINT is False, "We have broken this option"
+
+
 gym.undo_logger_setup()
 
 # Start main program
